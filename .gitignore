@@ -1,0 +1,13 @@
+# Virtual Environment
+venv/
+.venv/
+
+# Python Cache
+__pycache__/
+*.pyc
+
+# Local Data Files
+temp_pubmed.json
+
+# VS Code Settings
+.vscode/
