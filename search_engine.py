@@ -3,8 +3,7 @@ import os
 from elasticsearch import Elasticsearch
 
 ES_URL = os.getenv("ELASTICSEARCH_URL", "http://localhost:9200")
-INDEX = os.getenv("ELASTICSEARCH_INDEX", "pubmed-dev-index")
-
+INDEX = os.getenv("ELASTICSEARCH_INDEX", "pubmed-index")
 
 def search(query: str, top_k: int = 5):
     query = query.strip()
