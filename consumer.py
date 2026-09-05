@@ -11,6 +11,44 @@ ELASTICSEARCH_HOST = "http://localhost:9200"
 INDEX_NAME = "pubmed-index"
 BATCH_SIZE = 100
 
+def transform_record(record):
+    """Clean the Kafka record and add fields useful for search and analysis."""
+    doc = dict(record)
+
+    question = str(doc.get("question") or "").strip()
+    context = doc.get("context") or ""
+    long_answer = doc.get("long_answer") or ""
+
+    if isinstance(context, list):
+        context = " ".join(str(part) for part in context)
+    else:
+        context = str(context)
+
+    if isinstance(long_answer, list):
+        long_answer = " ".join(str(part) for part in long_answer)
+    else:
+        long_answer = str(long_answer)
+
+    doc["question"] = question
+    doc["context"] = context.strip()
+    doc["long_answer"] = long_answer.strip()
+    doc["final_decision"] = str(
+        doc.get("final_decision") or ""
+    ).strip().lower()
+
+    doc["context_word_count"] = len(doc["context"].split())
+    doc["has_long_answer"] = bool(doc["long_answer"])
+    doc["search_text"] = " ".join(
+        part for part in [
+            doc["question"],
+            doc["context"],
+            doc["long_answer"],
+        ]
+        if part
+    )
+
+    return doc
+
 
 def connect_to_elasticsearch(max_attempts=20):
     for attempt in range(1, max_attempts + 1):
@@ -62,6 +100,9 @@ def create_index(es):
                 "final_decision": {
                     "type": "keyword"
                 },
+		"context_word_count": {"type": "integer"},
+		"has_long_answer": {"type": "boolean"},
+		"search_text": {"type": "text"},
             }
         },
     )
@@ -123,7 +164,7 @@ def consume_and_index():
 
     try:
         for message in consumer:
-            batch.append(message.value)
+            batch.append(transform_record(message.value))
 
             if len(batch) >= BATCH_SIZE:
                 index_batch(es, batch)
